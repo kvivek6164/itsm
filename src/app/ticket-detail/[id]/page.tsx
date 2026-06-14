@@ -129,7 +129,7 @@ export default function TicketDetailPage() {
 
   const [status, setStatus] = useState<TicketStatus>(ticket.status);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'comments' | 'attachments'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'comments' | 'attachments' | 'linked-tickets' | 'engage-vendor'>('timeline');
   const [newComment, setNewComment] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [comments, setComments] = useState<Comment[]>(mockComments);
@@ -273,12 +273,12 @@ export default function TicketDetailPage() {
 
             {/* Tabs */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-              <div className="flex border-b border-slate-200 bg-slate-50/60">
-                {(['timeline', 'comments', 'attachments'] as const).map((tab) => (
+              <div className="flex border-b border-slate-200 bg-slate-50/60 overflow-x-auto">
+                {(['timeline', 'comments', 'attachments', 'linked-tickets', 'engage-vendor'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-5 py-3.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+                    className={`px-5 py-3.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px whitespace-nowrap ${
                       activeTab === tab
                         ? 'border-blue-600 text-blue-600 bg-white' :'border-transparent text-slate-500 hover:text-slate-700'
                     }`}
@@ -286,6 +286,8 @@ export default function TicketDetailPage() {
                     {tab === 'timeline' && <span className="flex items-center gap-1.5"><Icon name="ActivityIcon" size={14} />Timeline</span>}
                     {tab === 'comments' && <span className="flex items-center gap-1.5"><Icon name="MessageSquareIcon" size={14} />Comments <span className="ml-1 bg-slate-200 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">{comments.length}</span></span>}
                     {tab === 'attachments' && <span className="flex items-center gap-1.5"><Icon name="PaperclipIcon" size={14} />Attachments <span className="ml-1 bg-slate-200 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">{mockAttachments.length}</span></span>}
+                    {tab === 'linked-tickets' && <span className="flex items-center gap-1.5"><Icon name="LinkIcon" size={14} />Linked Tickets <span className="ml-1 bg-slate-200 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">3</span></span>}
+                    {tab === 'engage-vendor' && <span className="flex items-center gap-1.5"><Icon name="BriefcaseIcon" size={14} />Engage Vendor</span>}
                   </button>
                 ))}
               </div>
@@ -418,6 +420,183 @@ export default function TicketDetailPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Linked Tickets Tab */}
+              {activeTab === 'linked-tickets' && (
+                <div className="p-6 space-y-4">
+                  {/* Link a ticket */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 relative">
+                      <Icon name="SearchIcon" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search ticket ID or title to link…"
+                        className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
+                      />
+                    </div>
+                    <button className="btn-primary text-sm">
+                      <Icon name="LinkIcon" size={14} />
+                      Link Ticket
+                    </button>
+                  </div>
+
+                  {/* Linked tickets list */}
+                  <div className="space-y-3">
+                    {[
+                      { id: 'TKT-1041', title: 'Active Directory sync failure — 12 users locked out', relation: 'Related', priority: 'P1', status: 'In Progress', assignee: 'James Okafor', updated: '03/16/26 09:30' },
+                      { id: 'TKT-1038', title: 'Network switch reboot caused intermittent connectivity', relation: 'Root Cause', priority: 'P2', status: 'Resolved', assignee: 'Sarah Chen', updated: '03/15/26 18:45' },
+                      { id: 'TKT-1035', title: 'VPN client update required for all Engineering machines', relation: 'Duplicate', priority: 'P3', status: 'Closed', assignee: 'Marcus Reynolds', updated: '03/14/26 11:20' },
+                    ].map((lt) => (
+                      <div key={lt.id} className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-white hover:shadow-sm transition-all group">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span className="font-mono text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{lt.id}</span>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                              lt.relation === 'Root Cause' ? 'bg-red-50 text-red-600' :
+                              lt.relation === 'Duplicate'? 'bg-amber-50 text-amber-600' : 'bg-violet-50 text-violet-600'
+                            }`}>{lt.relation}</span>
+                            <span className={`badge ${priorityColors[lt.priority as Priority]}`}>{lt.priority}</span>
+                            <span className={`badge ${statusColors[lt.status as TicketStatus]}`}>{lt.status}</span>
+                          </div>
+                          <p className="text-sm font-medium text-slate-800 truncate">{lt.title}</p>
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                            <span className="flex items-center gap-1"><Icon name="UserIcon" size={11} />{lt.assignee}</span>
+                            <span className="flex items-center gap-1"><Icon name="ClockIcon" size={11} />Updated {lt.updated}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors" title="Open ticket">
+                            <Icon name="ExternalLinkIcon" size={13} className="text-slate-500" />
+                          </button>
+                          <button className="p-1.5 hover:bg-red-50 rounded-lg transition-colors" title="Unlink">
+                            <Icon name="XIcon" size={13} className="text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Summary */}
+                  <div className="grid grid-cols-3 gap-3 pt-1">
+                    {[
+                      { label: 'Related', count: 1, color: 'bg-violet-50 text-violet-700 border-violet-200' },
+                      { label: 'Root Cause', count: 1, color: 'bg-red-50 text-red-700 border-red-200' },
+                      { label: 'Duplicate', count: 1, color: 'bg-amber-50 text-amber-700 border-amber-200' },
+                    ].map((s) => (
+                      <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
+                        <p className="text-lg font-bold">{s.count}</p>
+                        <p className="text-xs font-medium">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Engage Vendor Tab */}
+              {activeTab === 'engage-vendor' && (
+                <div className="p-6 space-y-5">
+                  {/* Vendor assignment */}
+                  <div className="flex items-start gap-4 p-4 bg-blue-50/60 rounded-xl border border-blue-200">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+                      <Icon name="BriefcaseIcon" size={18} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">NetSecure Solutions Ltd.</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Network Infrastructure · Contract #VND-2024-0091</p>
+                        </div>
+                        <span className="text-xs font-medium bg-green-100 text-green-700 px-2.5 py-1 rounded-full border border-green-200">Active Contract</span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                        <span className="flex items-center gap-1"><Icon name="UserIcon" size={11} />Contact: David Marsh</span>
+                        <span className="flex items-center gap-1"><Icon name="MailIcon" size={11} />d.marsh@netsecure.com</span>
+                        <span className="flex items-center gap-1"><Icon name="PhoneIcon" size={11} />+1 (555) 204-8810</span>
+                      </div>
+                    </div>
+                    <button className="btn-secondary text-xs flex-shrink-0">
+                      <Icon name="EditIcon" size={12} />
+                      Change
+                    </button>
+                  </div>
+
+                  {/* Escalation status */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'Escalation Status', value: 'Pending Response', icon: 'AlertCircleIcon', color: 'text-amber-600 bg-amber-50 border-amber-200' },
+                      { label: 'SLA Commitment', value: '4-hour response', icon: 'ClockIcon', color: 'text-blue-600 bg-blue-50 border-blue-200' },
+                      { label: 'Ticket Ref (Vendor)', value: 'VND-TKT-88231', icon: 'HashIcon', color: 'text-slate-600 bg-slate-50 border-slate-200' },
+                    ].map((item) => (
+                      <div key={item.label} className={`rounded-xl border p-3.5 ${item.color}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon name={item.icon as any} size={14} />
+                          <p className="text-xs font-medium">{item.label}</p>
+                        </div>
+                        <p className="text-sm font-semibold">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Vendor communication thread */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <Icon name="MessageSquareIcon" size={14} className="text-slate-400" />
+                      Vendor Communication
+                    </h4>
+                    <div className="space-y-3">
+                      {[
+                        { from: 'Marcus Reynolds', initials: 'MR', color: 'bg-blue-600', role: 'IT Manager (Internal)', time: '03/16/26 06:00', body: 'We are experiencing a full VPN outage affecting 45 engineers. This is a P1 incident. Please provide immediate support and assign a senior network engineer.', direction: 'outbound' },
+                        { from: 'David Marsh', initials: 'DM', color: 'bg-indigo-600', role: 'NetSecure Solutions', time: '03/16/26 07:15', body: 'Acknowledged. Assigning senior engineer Alex Torres to this case. We will begin remote diagnostics within 30 minutes. Vendor ticket VND-TKT-88231 has been created.', direction: 'inbound' },
+                        { from: 'Alex Torres', initials: 'AT', color: 'bg-indigo-600', role: 'NetSecure — Senior Engineer', time: '03/16/26 07:50', body: 'Initial diagnostics complete. We\'ve identified a misconfiguration in the VPN gateway following last night\'s firmware update. Working on a rollback procedure now. ETA: 90 minutes.', direction: 'inbound' },
+                      ].map((msg, i) => (
+                        <div key={i} className={`flex gap-3 ${msg.direction === 'outbound' ? 'flex-row-reverse' : ''}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${msg.color}`}>
+                            {msg.initials}
+                          </div>
+                          <div className={`flex-1 max-w-[85%] ${msg.direction === 'outbound' ? 'items-end' : 'items-start'} flex flex-col`}>
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-xs font-semibold text-slate-700">{msg.from}</span>
+                              <span className="text-xs text-slate-400">{msg.role}</span>
+                              <span className="text-xs text-slate-400">{msg.time}</span>
+                            </div>
+                            <div className={`rounded-xl px-4 py-3 text-sm text-slate-700 leading-relaxed ${
+                              msg.direction === 'outbound' ? 'bg-blue-50 border border-blue-200' : 'bg-slate-50 border border-slate-200'
+                            }`}>
+                              {msg.body}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Send message to vendor */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                      <p className="text-xs font-medium text-slate-600">Send message to vendor</p>
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="Type your message to the vendor…"
+                      className="w-full px-4 py-3 text-sm text-slate-700 resize-none focus:outline-none bg-white"
+                    />
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-t border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <button className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors" title="Attach file">
+                          <Icon name="PaperclipIcon" size={14} className="text-slate-500" />
+                        </button>
+                        <button className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors" title="Set urgency">
+                          <Icon name="AlertTriangleIcon" size={14} className="text-slate-500" />
+                        </button>
+                      </div>
+                      <button className="btn-primary text-xs py-1.5">
+                        <Icon name="SendIcon" size={13} />
+                        Send to Vendor
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

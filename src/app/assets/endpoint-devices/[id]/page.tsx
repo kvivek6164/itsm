@@ -14,43 +14,30 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface SidebarTab {
-  id: string;
-  label: string;
-  count?: number;
-}
-
-// ── Sidebar tabs ──────────────────────────────────────────────────────────────
-
-const sidebarTabs: SidebarTab[] = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'summary', label: 'Summary' },
-  { id: 'asset-mapping', label: 'Asset Mapping' },
-  { id: 'system-information', label: 'System Information' },
-  { id: 'performance', label: 'Performance' },
-  { id: 'hdd', label: 'HDD', count: 2 },
-  { id: 'network', label: 'Network', count: 9 },
-  { id: 'installed-software', label: 'Installed Software', count: 74 },
-  { id: 'installed-patches', label: 'Installed Patches', count: 0 },
-  { id: 'missing-patches', label: 'Missing Patches', count: 0 },
-  { id: 'users', label: 'Users', count: 0 },
-  { id: 'startup-services', label: 'Startup Services', count: 0 },
-  { id: 'usb', label: 'USB', count: 0 },
-  { id: 'shared-folders', label: 'Shared Folders', count: 0 },
-  { id: 'device-drivers', label: 'Device Drivers', count: 0 },
-  { id: 'processes', label: 'Processes', count: 0 },
-];
-
 // ── Mock performance data ─────────────────────────────────────────────────────
 
-const perfData = Array.from({ length: 20 }, (_, i) => ({
-  time: `${i * 3}m`,
-  cpu: Math.floor(Math.random() * 40 + 10),
-  disk: Math.floor(Math.random() * 30 + 5),
-  memory: Math.floor(Math.random() * 50 + 20),
-}));
+const perfData = [
+  { time: '0m', cpu: 18, disk: 12, memory: 42 },
+  { time: '3m', cpu: 24, disk: 8, memory: 45 },
+  { time: '6m', cpu: 31, disk: 15, memory: 48 },
+  { time: '9m', cpu: 22, disk: 10, memory: 44 },
+  { time: '12m', cpu: 28, disk: 18, memory: 51 },
+  { time: '15m', cpu: 35, disk: 22, memory: 55 },
+  { time: '18m', cpu: 19, disk: 9, memory: 43 },
+  { time: '21m', cpu: 26, disk: 14, memory: 47 },
+  { time: '24m', cpu: 33, disk: 20, memory: 52 },
+  { time: '27m', cpu: 21, disk: 11, memory: 46 },
+  { time: '30m', cpu: 29, disk: 16, memory: 49 },
+  { time: '33m', cpu: 38, disk: 25, memory: 58 },
+  { time: '36m', cpu: 23, disk: 13, memory: 44 },
+  { time: '39m', cpu: 27, disk: 17, memory: 50 },
+  { time: '42m', cpu: 32, disk: 21, memory: 53 },
+  { time: '45m', cpu: 20, disk: 10, memory: 45 },
+  { time: '48m', cpu: 25, disk: 15, memory: 48 },
+  { time: '51m', cpu: 36, disk: 23, memory: 56 },
+  { time: '54m', cpu: 22, disk: 12, memory: 43 },
+  { time: '57m', cpu: 30, disk: 18, memory: 51 },
+];
 
 // ── HDD data ──────────────────────────────────────────────────────────────────
 
@@ -83,590 +70,578 @@ const softwareData = Array.from({ length: 74 }, (_, i) => ({
     'VLC Media Player', 'Notepad++', 'Python 3.11', 'Docker Desktop', 'Postman',
     'Microsoft Teams', 'OneDrive', 'Windows Defender', 'Malwarebytes', 'CCleaner',
   ][i % 20],
-  version: `${Math.floor(Math.random() * 10 + 1)}.${Math.floor(Math.random() * 9)}.${Math.floor(Math.random() * 9)}`,
+  version: `${(i % 10) + 1}.${i % 9}.${i % 9}`,
   publisher: ['Microsoft', 'Google', 'Mozilla', 'Adobe', 'Zoom Video', 'Slack Technologies', 'Open Source'][i % 7],
-  installDate: `2025-${String(Math.floor(Math.random() * 12 + 1)).padStart(2, '0')}-${String(Math.floor(Math.random() * 28 + 1)).padStart(2, '0')}`,
+  installDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
 }));
 
-// ── Section helpers ───────────────────────────────────────────────────────────
+// ── Main Bento Grid ───────────────────────────────────────────────────────────
 
-function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <tr className="border-b border-slate-100 last:border-0">
-      <td className="py-2 px-3 text-sm text-slate-600 w-1/2">{label}</td>
-      <td className={`py-2 px-3 text-sm font-medium ${highlight ? 'text-red-500' : 'text-slate-800'}`}>{value}</td>
-    </tr>
+function BentoGrid() {
+  const [softwareSearch, setSoftwareSearch] = useState('');
+  const [softwarePage, setSoftwarePage] = useState(1);
+  const perPage = 8;
+  const filteredSoftware = softwareData.filter(s =>
+    s.name.toLowerCase().includes(softwareSearch.toLowerCase())
   );
-}
+  const paginatedSoftware = filteredSoftware.slice((softwarePage - 1) * perPage, softwarePage * perPage);
+  const totalSoftwarePages = Math.ceil(filteredSoftware.length / perPage);
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden mb-4">
-      <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
-        <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
-        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">{title}</h4>
+    <div className="space-y-4">
+
+      {/* ── Row 1: Identity + CPU + OS ── */}
+      <div className="grid grid-cols-4 gap-4">
+        {/* Identity card — 2 cols */}
+        <div className="col-span-2 bg-slate-800 rounded-2xl p-5 text-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+                <Icon name="ComputerDesktopIcon" size={16} className="text-white" />
+              </div>
+              <span className="text-xs text-slate-400 uppercase tracking-widest">Endpoint Device</span>
+            </div>
+            <h2 className="text-xl font-bold text-white mb-1">LIL061010007</h2>
+            <p className="text-slate-400 text-xs">HP Pro SFF 280 G9 Desktop PC</p>
+            <p className="text-slate-500 text-xs mt-0.5">Serial: INI3040CX4</p>
+          </div>
+          <div className="space-y-2 mt-4">
+            <div className="flex items-center gap-2">
+              <Icon name="GlobeAltIcon" size={12} className="text-slate-400" />
+              <span className="text-xs text-slate-300">192.168.102.66</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Icon name="BuildingOfficeIcon" size={12} className="text-slate-400" />
+              <span className="text-xs text-slate-300">lumaxdkjaingroup.net</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Icon name="CalendarIcon" size={12} className="text-slate-400" />
+              <span className="text-xs text-slate-300">Scanned 05/06/2026 12:44</span>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-700 flex items-center justify-between">
+            <span className="px-2.5 py-1 bg-amber-400/20 text-amber-300 text-xs font-semibold rounded-full">In-Store</span>
+            <span className="text-xs text-slate-500">Asset Tag: LIL061010007</span>
+          </div>
+        </div>
+
+        {/* CPU card */}
+        <div className="col-span-1 bg-violet-50 border border-violet-100 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="CpuChipIcon" size={14} className="text-violet-600" />
+            <span className="text-xs font-semibold text-violet-700">CPU</span>
+          </div>
+          <p className="text-sm font-bold text-slate-800 leading-tight">i5-12400</p>
+          <p className="text-xs text-slate-500 mt-0.5">12th Gen Intel Core</p>
+          <p className="text-xs text-slate-400 mt-0.5">x64-based PC</p>
+          <div className="mt-3 flex gap-2">
+            <div className="flex-1 bg-white rounded-lg p-2 text-center">
+              <p className="text-base font-bold text-violet-600">12</p>
+              <p className="text-[10px] text-slate-500">Cores</p>
+            </div>
+            <div className="flex-1 bg-white rounded-lg p-2 text-center">
+              <p className="text-base font-bold text-violet-600">6</p>
+              <p className="text-[10px] text-slate-500">Physical</p>
+            </div>
+          </div>
+          <div className="mt-2 bg-white rounded-lg p-2 text-center">
+            <p className="text-base font-bold text-violet-600">12.5%</p>
+            <p className="text-[10px] text-slate-500">Current Usage</p>
+          </div>
+        </div>
+
+        {/* OS card */}
+        <div className="col-span-1 bg-sky-50 border border-sky-100 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="ComputerDesktopIcon" size={14} className="text-sky-600" />
+            <span className="text-xs font-semibold text-sky-700">Operating System</span>
+          </div>
+          <p className="text-sm font-bold text-slate-800">Windows 11 Pro</p>
+          <p className="text-xs text-slate-500 mt-0.5">x64-based PC</p>
+          <div className="mt-3 space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">Last Boot</span>
+              <span className="text-xs font-medium text-slate-700">05/06/2026</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">Boot Time</span>
+              <span className="text-xs font-medium text-slate-700">07:48:25</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">Logged User</span>
+              <span className="text-xs font-medium text-slate-700">N/A</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">Activation</span>
+              <span className="text-xs font-medium text-red-500">Not Available</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div>{children}</div>
-    </div>
-  );
-}
 
-// ── Tab content components ────────────────────────────────────────────────────
-
-function DashboardTab() {
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* CMDB Profile */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5">
-        <h3 className="text-base font-semibold text-slate-800 text-center mb-1">CMDB Profile</h3>
-        <hr className="border-slate-200 mb-4" />
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-slate-500 w-28 flex-shrink-0">Status :</span>
-            <span className="text-sm font-medium text-slate-800">In-Store</span>
+      {/* ── Row 2: Storage + Security + Software count + System Health ── */}
+      <div className="grid grid-cols-4 gap-4">
+        {/* Storage — 2 cols */}
+        <div className="col-span-2 bg-amber-50 border border-amber-100 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="CircleStackIcon" size={14} className="text-amber-600" />
+            <span className="text-xs font-semibold text-amber-700">Storage (HDD)</span>
+            <span className="ml-auto text-xs font-bold text-slate-700">2 drives</span>
           </div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-slate-500 w-28 flex-shrink-0">Make :</span>
-            <span className="text-sm font-medium text-slate-800">HP</span>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {hddData.map(d => (
+              <div key={d.id} className="bg-white rounded-xl p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-slate-800">{d.drive}</span>
+                  <span className="text-xs text-slate-500">{d.size}</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1">
+                  <div
+                    className="bg-amber-400 h-1.5 rounded-full"
+                    style={{ width: d.drive === 'C:\\' ? '87%' : '16%' }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500">{d.free} free</p>
+                <p className="text-xs text-slate-400 mt-0.5">{d.description}</p>
+              </div>
+            ))}
           </div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-slate-500 w-28 flex-shrink-0">Model :</span>
-            <span className="text-sm font-medium text-slate-800">HP Pro SFF 280 G9 Desktop PC</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-slate-500 w-28 flex-shrink-0">Serial No. :</span>
-            <span className="text-sm font-medium text-slate-800">INI3040CX4</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-slate-500 w-28 flex-shrink-0">Warranty Expiry :</span>
-            <span className="text-sm font-medium text-slate-800">N/A</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-slate-500 w-28 flex-shrink-0">Vendor :</span>
-            <span className="text-sm font-medium text-slate-800">N/A</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-slate-500 w-28 flex-shrink-0">Total Cost :</span>
-            <span className="text-sm font-medium text-slate-800">0 INR</span>
+          <div className="bg-white rounded-xl overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50">
+                <tr>
+                  {['Drive', 'Size', 'Free', 'Type'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-slate-500 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {hddData.map(row => (
+                  <tr key={row.id} className="hover:bg-slate-50">
+                    <td className="px-3 py-2 font-medium text-slate-700">{row.drive}</td>
+                    <td className="px-3 py-2 text-slate-600">{row.size}</td>
+                    <td className="px-3 py-2 text-slate-600">{row.free}</td>
+                    <td className="px-3 py-2 text-slate-600">{row.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
-          <div className="flex items-center gap-2">
-            <Icon name="MapPinIcon" size={13} className="text-slate-400" />
-            <span className="text-sm text-slate-500">null</span>
+
+        {/* Security card */}
+        <div className="col-span-1 bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="ShieldCheckIcon" size={14} className="text-emerald-600" />
+            <span className="text-xs font-semibold text-slate-700">Security</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Icon name="UserIcon" size={13} className="text-slate-400" />
-            <span className="text-sm text-slate-500">Allocated To N/A</span>
+          <div className="space-y-2">
+            {[
+              ['OS Updates', false],
+              ['Firewall (Public)', false],
+              ['Firewall (Private)', false],
+              ['Firewall (Domain)', false],
+              ['Bitlocker', false],
+              ['System Restore', false],
+            ].map(([l, v]) => (
+              <div key={l as string} className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">{l as string}</span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${v ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                  {v ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            <Icon name="CalendarIcon" size={13} className="text-slate-400" />
-            <span className="text-sm text-slate-500">—</span>
+          <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">Missing Patches</span>
+              <span className="text-xs font-bold text-slate-700">0</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">Blacklisted SW</span>
+              <span className="text-xs font-bold text-slate-700">0</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Icon name="UserIcon" size={13} className="text-slate-400" />
-            <span className="text-sm text-slate-500">Allocated By N/A</span>
+        </div>
+
+        {/* System Health */}
+        <div className="col-span-1 bg-rose-50 border border-rose-100 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="HeartIcon" size={14} className="text-rose-500" />
+            <span className="text-xs font-semibold text-rose-700">System Health</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Icon name="UserIcon" size={13} className="text-slate-400" />
-            <span className="text-sm text-slate-500">Created By N/A</span>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {[
+              { label: 'C Drive', value: '87%', sub: 'used', warn: true },
+              { label: 'Temp Files', value: '252MB', sub: 'on disk', warn: false },
+              { label: 'Recycle Bin', value: '16MB', sub: 'pending', warn: false },
+              { label: 'CPU Usage', value: '12.5%', sub: 'current', warn: false },
+            ].map(m => (
+              <div key={m.label} className="bg-white rounded-xl p-2 text-center">
+                <p className={`text-sm font-bold ${m.warn ? 'text-rose-500' : 'text-slate-700'}`}>{m.value}</p>
+                <p className="text-[10px] text-slate-500">{m.label}</p>
+                <p className="text-[10px] text-slate-400">{m.sub}</p>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            <Icon name="CalendarIcon" size={13} className="text-slate-400" />
-            <span className="text-sm text-slate-500">Created On 05/06/2026</span>
+          <div className="space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">Last Boot</span>
+              <span className="text-xs font-medium text-slate-700">05/06/2026 07:48</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-slate-500">C Drive Free</span>
+              <span className="text-xs font-medium text-slate-700">37.01 GB</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Endpoint Profile */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5">
-        <h3 className="text-base font-semibold text-slate-800 text-center mb-1">Endpoint Profile</h3>
-        <p className="text-xs text-slate-400 text-center mb-3">(Last Scanned 05/06/2026 12:44:34)</p>
-        <hr className="border-slate-200 mb-4" />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
-          <div>
-            <span className="text-xs text-slate-500">Make :</span>
-            <span className="text-sm font-medium text-slate-800 ml-1">HP</span>
+      {/* ── Row 3: Network + Software count ── */}
+      <div className="grid grid-cols-4 gap-4">
+        {/* Network — 3 cols */}
+        <div className="col-span-3 bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="WifiIcon" size={14} className="text-rose-500" />
+            <span className="text-xs font-semibold text-slate-700">Network Adapters</span>
+            <span className="ml-auto text-xs font-bold text-slate-800">9 total</span>
           </div>
-          <div>
-            <span className="text-xs text-slate-500">IP Address :</span>
-            <span className="text-sm font-medium text-slate-800 ml-1">192.168.102.66</span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500">Model :</span>
-            <span className="text-sm font-medium text-slate-800 ml-1">HP Pro SFF 280 G9 Desktop PC</span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500">Domain :</span>
-            <span className="text-sm font-medium text-slate-800 ml-1">lumaxdkjaingroup.net</span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500">Serial No. :</span>
-            <span className="text-sm font-medium text-slate-800 ml-1">INI3040CX4</span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500">Logged In User :</span>
-            <span className="text-sm font-medium text-slate-800 ml-1">null</span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500">Host Name :</span>
-            <span className="text-sm font-medium text-blue-600 ml-1">LIL061010007</span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500">User Privilege :</span>
-            <span className="text-sm font-medium text-slate-800 ml-1">null</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 mb-4 bg-slate-50 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <Icon name="CpuChipIcon" size={14} className="text-slate-500" />
-            <span className="text-xs text-slate-600">12th Gen Intel(R) Core(TM) i5-12400</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Icon name="ComputerDesktopIcon" size={14} className="text-slate-500" />
-            <span className="text-xs text-slate-600">Windows 11 Pro</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Icon name="CircleStackIcon" size={14} className="text-slate-500" />
-            <span className="text-xs text-slate-600">0 GB RAM</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Icon name="ServerIcon" size={14} className="text-slate-500" />
-            <span className="text-xs text-slate-600">238 GB Drive</span>
+          <div className="overflow-x-auto rounded-xl border border-slate-100">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50">
+                <tr>
+                  {['#', 'Adapter', 'IP Address', 'MAC Address', 'Speed', 'Status'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-slate-500 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {networkData.map(row => (
+                  <tr key={row.id} className="hover:bg-slate-50">
+                    <td className="px-3 py-2 text-slate-400">{row.id}</td>
+                    <td className="px-3 py-2 font-medium text-slate-700">{row.adapter}</td>
+                    <td className="px-3 py-2 text-slate-600">{row.ipAddress}</td>
+                    <td className="px-3 py-2 font-mono text-slate-500">{row.macAddress}</td>
+                    <td className="px-3 py-2 text-slate-600">{row.speed}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        row.status === 'Connected' || row.status === 'Active' || row.status === 'Enabled' ?'bg-emerald-50 text-emerald-700' :'bg-slate-100 text-slate-500'
+                      }`}>
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-4">
+        {/* Software count card */}
+        <div className="col-span-1 bg-blue-600 rounded-2xl p-4 text-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Icon name="SquaresPlusIcon" size={14} className="text-blue-200" />
+              <span className="text-xs font-semibold text-blue-200">Software</span>
+            </div>
+            <p className="text-4xl font-bold text-white">74</p>
+            <p className="text-xs text-blue-200 mt-0.5">Installed apps</p>
+          </div>
+          <div className="space-y-2 pt-3 border-t border-blue-500">
+            <div className="flex justify-between">
+              <span className="text-xs text-blue-300">Blacklisted</span>
+              <span className="text-xs font-bold text-white">0</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-blue-300">Patches</span>
+              <span className="text-xs font-bold text-white">0</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-blue-300">Missing</span>
+              <span className="text-xs font-bold text-white">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 4: Asset Summary + System Information ── */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Asset Summary */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="ServerIcon" size={14} className="text-blue-500" />
+            <span className="text-xs font-semibold text-slate-700">Asset Summary (CMDB)</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            {[
+              ['Asset Tag', 'LIL061010007'],
+              ['Make', 'HP'],
+              ['Model', 'HP Pro SFF 280 G9 Desktop PC'],
+              ['Serial No.', 'INI3040CX4'],
+              ['Status', 'In-Store'],
+              ['Location', 'HQ - Main Building'],
+              ['Department', 'IT Operations'],
+              ['Assigned To', 'N/A'],
+              ['Purchase Date', '05/06/2026'],
+              ['Warranty Expiry', 'N/A'],
+              ['Vendor', 'N/A'],
+              ['Total Cost', '0 INR'],
+            ].map(([label, value]) => (
+              <div key={label} className="flex gap-2">
+                <span className="text-xs text-slate-500 w-28 flex-shrink-0">{label}:</span>
+                <span className="text-xs font-medium text-slate-800 truncate">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* System Information */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="InformationCircleIcon" size={14} className="text-slate-500" />
+            <span className="text-xs font-semibold text-slate-700">System Information</span>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">System Details</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                {[
+                  ['Make', 'HP'],
+                  ['Model', 'HP Pro SFF 280 G9 Desktop PC'],
+                  ['Serial No', '9KD040CX4'],
+                  ['Host Name', 'LIL061010007'],
+                  ['Domain', 'lumaxdkjaingroup.net'],
+                  ['Last Updated', '05-06-2026 12:55:26'],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex gap-2">
+                    <span className="text-xs text-slate-500 w-24 flex-shrink-0">{l}:</span>
+                    <span className="text-xs font-medium text-slate-800 truncate">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-slate-100 pt-3">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">HDD Details</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                {[
+                  ['HDD Model', 'CONSISTENT M.2 50 256GB SSD'],
+                  ['HDD Serial', 'VXVDSUBEX4GLTOA7N0'],
+                  ['HDD Size', '238 GB'],
+                  ['HDD Type', 'SSD'],
+                  ['HDD Usage', '84.8%'],
+                  ['HDD Bus Type', 'RAID'],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex gap-2">
+                    <span className="text-xs text-slate-500 w-24 flex-shrink-0">{l}:</span>
+                    <span className="text-xs font-medium text-slate-800 truncate">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-slate-100 pt-3">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">RAM Details</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                {[
+                  ['Total Slots', '0'],
+                  ['Used Slots', '0'],
+                  ['Empty Slots', '0'],
+                  ['RAM Size', 'N/A'],
+                  ['RAM Type', 'N/A'],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex gap-2">
+                    <span className="text-xs text-slate-500 w-24 flex-shrink-0">{l}:</span>
+                    <span className="text-xs font-medium text-slate-800">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 5: Performance Charts ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Icon name="ChartBarIcon" size={14} className="text-blue-500" />
+          <span className="text-xs font-semibold text-slate-700">Performance Monitoring</span>
+          <span className="ml-auto text-xs text-slate-400">Last 60 minutes</span>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
           {[
-            ['OS Updates', false], ['Firewall (Public)', false],
-            ['Bitlocker', false], ['Firewall (Private)', false],
-            ['System Restore', false], ['Firewall (Domain)', false],
-          ].map(([label, active]) => (
-            <div key={label as string} className="flex items-center gap-2">
-              <span className="text-xs text-slate-600">{label as string}</span>
-              <span className={`w-2.5 h-2.5 rounded-full ${active ? 'bg-green-500' : 'bg-slate-300'}`} />
+            { label: 'CPU Utilization (%)', key: 'cpu', color: '#3b82f6' },
+            { label: 'Disk Utilization (%)', key: 'disk', color: '#10b981' },
+            { label: 'Memory Utilization (%)', key: 'memory', color: '#8b5cf6' },
+          ].map(({ label, key, color }) => (
+            <div key={key}>
+              <h4 className="text-xs font-medium text-slate-600 mb-2">{label}</h4>
+              <ResponsiveContainer width="100%" height={130}>
+                <LineChart data={perfData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="time" tick={{ fontSize: 8, fill: '#94a3b8' }} interval={4} />
+                  <YAxis tick={{ fontSize: 8, fill: '#94a3b8' }} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e2e8f0' }} />
+                  <Line type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           ))}
         </div>
+      </div>
 
-        <hr className="border-slate-100 mb-3" />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <div className="flex justify-between">
-            <span className="text-xs text-slate-500">Installed Software</span>
-            <span className="text-xs font-semibold text-slate-800">74</span>
+      {/* ── Row 6: Installed Software ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Icon name="SquaresPlusIcon" size={14} className="text-blue-500" />
+          <span className="text-xs font-semibold text-slate-700">Installed Software</span>
+          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">74</span>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-slate-500">Search:</span>
+            <input
+              type="text"
+              value={softwareSearch}
+              onChange={e => { setSoftwareSearch(e.target.value); setSoftwarePage(1); }}
+              className="text-xs border border-slate-200 rounded px-2 py-1 w-36 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="Filter software..."
+            />
           </div>
-          <div className="flex justify-between">
-            <span className="text-xs text-slate-500">C Drive Space</span>
-            <span className="text-xs font-semibold text-slate-800">37.01 GB</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-xs text-slate-500">Blacklisted Software</span>
-            <span className="text-xs font-semibold text-slate-800">0</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-xs text-slate-500">Recycle Bin</span>
-            <span className="text-xs font-semibold text-slate-800">16.1 MB</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-xs text-slate-500">Missing Patches</span>
-            <span className="text-xs font-semibold text-slate-800">0</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-xs text-slate-500">Temp Files</span>
-            <span className="text-xs font-semibold text-slate-800">252.74 MB</span>
+        </div>
+        <div className="overflow-x-auto rounded-xl border border-slate-100">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50">
+              <tr>
+                {['#', 'Name', 'Version', 'Publisher', 'Install Date'].map(h => (
+                  <th key={h} className="text-left px-3 py-2 text-slate-500 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedSoftware.map(row => (
+                <tr key={row.id} className="hover:bg-slate-50">
+                  <td className="px-3 py-2 text-slate-400">{row.id}</td>
+                  <td className="px-3 py-2 font-medium text-slate-700">{row.name}</td>
+                  <td className="px-3 py-2 text-slate-600">{row.version}</td>
+                  <td className="px-3 py-2 text-slate-600">{row.publisher}</td>
+                  <td className="px-3 py-2 text-slate-600">{row.installDate}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-xs text-slate-500">
+            Showing {(softwarePage - 1) * perPage + 1} to {Math.min(softwarePage * perPage, filteredSoftware.length)} of {filteredSoftware.length} entries
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSoftwarePage(p => Math.max(1, p - 1))}
+              disabled={softwarePage === 1}
+              className="text-xs px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            {Array.from({ length: Math.min(5, totalSoftwarePages) }, (_, i) => i + 1).map(p => (
+              <button
+                key={p}
+                onClick={() => setSoftwarePage(p)}
+                className={`text-xs px-2.5 py-1 rounded ${softwarePage === p ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50'}`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setSoftwarePage(p => Math.min(totalSoftwarePages, p + 1))}
+              disabled={softwarePage === totalSoftwarePages}
+              className="text-xs px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function SummaryTab() {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-slate-800 mb-4">Asset Summary</h3>
-      <div className="grid grid-cols-2 gap-4">
+      {/* ── Row 7: Asset Mapping + Empty sections ── */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Asset Mapping */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="LinkIcon" size={14} className="text-slate-500" />
+            <span className="text-xs font-semibold text-slate-700">Asset Mapping</span>
+          </div>
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <Icon name="ArchiveBoxIcon" size={28} className="text-slate-300 mb-2" />
+            <p className="text-xs text-slate-400">No asset mappings configured for this device.</p>
+          </div>
+        </div>
+
+        {/* Installed Patches */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="ArrowDownTrayIcon" size={14} className="text-slate-500" />
+            <span className="text-xs font-semibold text-slate-700">Installed Patches</span>
+            <span className="ml-2 text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">0</span>
+          </div>
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <Icon name="ArchiveBoxIcon" size={28} className="text-slate-300 mb-2" />
+            <p className="text-xs text-slate-400">No installed patches data available.</p>
+          </div>
+        </div>
+
+        {/* Missing Patches */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="ExclamationTriangleIcon" size={14} className="text-amber-500" />
+            <span className="text-xs font-semibold text-slate-700">Missing Patches</span>
+            <span className="ml-2 text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-semibold">0</span>
+          </div>
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <Icon name="CheckCircleIcon" size={28} className="text-emerald-300 mb-2" />
+            <p className="text-xs text-slate-400">No missing patches. Device is up to date.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 8: Users + Startup Services + USB + Shared Folders ── */}
+      <div className="grid grid-cols-4 gap-4">
         {[
-          ['Asset Tag', 'LIL061010007'], ['Make', 'HP'], ['Model', 'HP Pro SFF 280 G9 Desktop PC'],
-          ['Serial No.', 'INI3040CX4'], ['Status', 'In-Store'], ['Location', 'HQ - Main Building'],
-          ['Department', 'IT Operations'], ['Assigned To', 'N/A'], ['Purchase Date', '05/06/2026'],
-          ['Warranty Expiry', 'N/A'], ['Vendor', 'N/A'], ['Total Cost', '0 INR'],
-        ].map(([label, value]) => (
-          <div key={label} className="flex gap-2">
-            <span className="text-sm text-slate-500 w-36 flex-shrink-0">{label} :</span>
-            <span className="text-sm font-medium text-slate-800">{value}</span>
+          { label: 'Users', icon: 'UsersIcon', count: 0 },
+          { label: 'Startup Services', icon: 'BoltIcon', count: 0 },
+          { label: 'USB Devices', icon: 'CpuChipIcon', count: 0 },
+          { label: 'Shared Folders', icon: 'FolderIcon', count: 0 },
+        ].map(item => (
+          <div key={item.label} className="bg-white border border-slate-200 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Icon name={item.icon as any} size={14} className="text-slate-500" />
+              <span className="text-xs font-semibold text-slate-700">{item.label}</span>
+              <span className="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{item.count}</span>
+            </div>
+            <div className="flex flex-col items-center justify-center py-4 text-center">
+              <Icon name="ArchiveBoxIcon" size={24} className="text-slate-300 mb-1.5" />
+              <p className="text-[10px] text-slate-400">No data available.</p>
+            </div>
           </div>
         ))}
       </div>
-    </div>
-  );
-}
 
-function AssetMappingTab() {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-slate-800 mb-4">Asset Mapping</h3>
-      <p className="text-sm text-slate-500">No asset mappings configured for this device.</p>
-    </div>
-  );
-}
-
-function SystemInformationTab() {
-  return (
-    <div className="space-y-0">
-      <SectionCard title="System Details">
-        <table className="w-full">
-          <tbody>
-            <InfoRow label="Make" value="HP" />
-            <InfoRow label="Model" value="HP Pro SFF 280 G9 Desktop PC" />
-            <InfoRow label="Serial No" value="9KD040CX4" />
-            <InfoRow label="Host Name" value="LIL061010007" />
-            <InfoRow label="Domain Name" value="lumaxdkjaingroup.net" />
-            <InfoRow label="Last Updated" value="05-06-2026 12:55:26" />
-          </tbody>
-        </table>
-      </SectionCard>
-
-      <SectionCard title="CPU Details">
-        <table className="w-full">
-          <tbody>
-            <InfoRow label="Graphics Details" value="12th Gen Intel(R) Core(TM) i5-12400" />
-            <InfoRow label="CPU Architecture" value="x64-based PC" />
-            <InfoRow label="No of Processors" value="1" />
-            <InfoRow label="Total Cores" value="12" />
-            <InfoRow label="Physical Cores" value="6" />
-            <InfoRow label="CPU Usage" value="12.5" />
-          </tbody>
-        </table>
-      </SectionCard>
-
-      <SectionCard title="HDD Details">
-        <table className="w-full">
-          <tbody>
-            <InfoRow label="HDD Serial No" value="VXVDSUBEX4GLTOA7N0" />
-            <InfoRow label="HDD Model" value="CONSISTENT M.2 50 256GB SSD" />
-            <InfoRow label="Partition Name" value="C" />
-            <InfoRow label="HDD Size" value="238 GB" />
-            <InfoRow label="HDD Usage" value="84.8%" />
-            <InfoRow label="HDD Status" value="Healthy" />
-            <InfoRow label="HDD Type" value="SSD" />
-            <InfoRow label="HDD Bus Type" value="RAID" />
-          </tbody>
-        </table>
-      </SectionCard>
-
-      <SectionCard title="Graphic Details">
-        <table className="w-full">
-          <tbody>
-            <InfoRow label="Graphics Card Name" value="" />
-          </tbody>
-        </table>
-      </SectionCard>
-
-      <SectionCard title="OS Details">
-        <div className="p-3 grid grid-cols-2 gap-x-8 gap-y-1">
-          {[
-            ['Operating System', 'Windows 11 Pro', false], ['OS Serial No', 'Not Available', true],
-            ['Activation Status', 'Not Available', true], ['OS Version', 'Not Available', true],
-            ['Display Version', 'Not Available', true], ['Product Name', 'Not Available', true],
-            ['Architecture', 'Not Available', true], ['Installation Type', 'Not Available', true],
-            ['System Root', 'Not Available', true], ['Product Key Type', 'Not Available', true],
-            ['Is Genuine', 'Not Available', true], ['Is Volume Licensed', 'Not Available', true],
-            ['Activation Method', 'Not Available', true],
-          ].map(([label, value, red]) => (
-            <div key={label} className="flex gap-2">
-              <span className="text-xs text-slate-500 w-36 flex-shrink-0">{label}</span>
-              <span className={`text-xs font-medium ${red ? 'text-red-500' : 'text-slate-800'}`}>{value}</span>
+      {/* ── Row 9: Device Drivers + Processes ── */}
+      <div className="grid grid-cols-2 gap-4">
+        {[
+          { label: 'Device Drivers', icon: 'CpuChipIcon', count: 0 },
+          { label: 'Processes', icon: 'ChartBarIcon', count: 0 },
+        ].map(item => (
+          <div key={item.label} className="bg-white border border-slate-200 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Icon name={item.icon as any} size={14} className="text-slate-500" />
+              <span className="text-xs font-semibold text-slate-700">{item.label}</span>
+              <span className="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{item.count}</span>
             </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="RAM Details">
-        <table className="w-full">
-          <tbody>
-            <InfoRow label="Size of RAM" value="" />
-            <InfoRow label="Type of RAM" value="" />
-            <InfoRow label="Total Slots" value="0" />
-            <InfoRow label="Used Slots" value="0" />
-            <InfoRow label="Empty Slots" value="0" />
-          </tbody>
-        </table>
-      </SectionCard>
-
-      <SectionCard title="Keyboard Details">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-50">
-              <tr>
-                {['Device Name', 'Description', 'Function Keys', 'Connection Type'].map(h => (
-                  <th key={h} className="text-left px-3 py-2 text-slate-600 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-400 text-xs">No data available in table</td></tr>
-            </tbody>
-          </table>
-          <p className="text-xs text-slate-400 px-3 py-2">Showing 0 to 0 of 0 entries</p>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Mouse Details">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-50">
-              <tr>
-                {['Device Name', 'Manufacturer', 'Connection Type', 'Handedness'].map(h => (
-                  <th key={h} className="text-left px-3 py-2 text-slate-600 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-400 text-xs">No data available in table</td></tr>
-            </tbody>
-          </table>
-          <p className="text-xs text-slate-400 px-3 py-2">Showing 0 to 0 of 0 entries</p>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Monitor Details">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-50">
-              <tr>
-                {['Device Name', 'Manufacturer', 'Screen Height', 'Screen Width'].map(h => (
-                  <th key={h} className="text-left px-3 py-2 text-slate-600 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-400 text-xs">No data available in table</td></tr>
-            </tbody>
-          </table>
-          <p className="text-xs text-slate-400 px-3 py-2">Showing 0 to 0 of 0 entries</p>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Anti-virus Information">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-50">
-              <tr>
-                {['Serial No', 'Name', 'Update Status', 'Enable Status'].map(h => (
-                  <th key={h} className="text-left px-3 py-2 text-slate-600 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-400 text-xs">No data available in table</td></tr>
-            </tbody>
-          </table>
-          <p className="text-xs text-slate-400 px-3 py-2">Showing 0 to 0 of 0 entries</p>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="System Health">
-        <table className="w-full">
-          <tbody>
-            <InfoRow label="System Health" value="" />
-            <InfoRow label="Last Boot Time" value="05/06/2026 07:48:25" />
-            <InfoRow label="Last Boot Duration(Sec)" value="Unknown" />
-            <InfoRow label="Last Logon Duration(Sec)" value="Unknown" />
-            <InfoRow label="Logged In User" value="" />
-            <InfoRow label="User Privileges" value="" />
-            <InfoRow label="C partition free space" value="37.01 GB" />
-            <InfoRow label="Recycle Bin" value="16.1 MB" />
-            <InfoRow label="Temporary File" value="252.74 MB" />
-            <InfoRow label="Bitlocker Protection Status" value="null" />
-            <InfoRow label="Bitlocker Lock Status" value="null" />
-          </tbody>
-        </table>
-      </SectionCard>
-    </div>
-  );
-}
-
-function PerformanceTab() {
-  return (
-    <div className="space-y-4">
-      {[
-        { label: 'CPU Utilization(%)', key: 'cpu', color: '#3b82f6' },
-        { label: 'Disk Utilization(%)', key: 'disk', color: '#10b981' },
-        { label: 'Memory Utilization(%)', key: 'memory', color: '#8b5cf6' },
-      ].map(({ label, key, color }) => (
-        <div key={key} className="bg-white border border-slate-200 rounded-xl p-4">
-          <h4 className="text-sm font-medium text-blue-600 mb-3">{label}</h4>
-          <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={perfData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#94a3b8' }} />
-              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} domain={[0, 100]} />
-              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0' }} />
-              <Line type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function HDDTab() {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <select className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-600">
-            <option>10 Rows</option>
-            <option>25 Rows</option>
-            <option>50 Rows</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Search:</span>
-          <input type="text" className="text-xs border border-slate-200 rounded px-2 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-blue-400" />
-          <div className="flex items-center gap-1 text-slate-400">
-            <Icon name="ArrowPathIcon" size={13} />
-            <Icon name="ArrowDownTrayIcon" size={13} />
-            <Icon name="DocumentTextIcon" size={13} />
-            <Icon name="ChartBarIcon" size={13} />
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <Icon name="ArchiveBoxIcon" size={28} className="text-slate-300 mb-2" />
+              <p className="text-xs text-slate-400">No {item.label.toLowerCase()} data available for this device.</p>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            {['Id', 'Drive', 'Size', 'Free', 'Description'].map(h => (
-              <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-600">
-                <div className="flex items-center gap-1">{h} <Icon name="ChevronUpDownIcon" size={10} className="text-slate-400" /></div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {hddData.map(row => (
-            <tr key={row.id} className="hover:bg-slate-50">
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.id}</td>
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.drive}</td>
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.size}</td>
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.free}</td>
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.description}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100">
-        <span className="text-xs text-slate-500">Showing 1 to 2 of 2 entries</span>
-        <div className="flex items-center gap-1">
-          <button className="text-xs px-2 py-1 border border-slate-200 rounded hover:bg-slate-50">Previous</button>
-          <button className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded">1</button>
-          <button className="text-xs px-2 py-1 border border-slate-200 rounded hover:bg-slate-50">Next</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function NetworkTab() {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            {['#', 'Adapter', 'IP Address', 'MAC Address', 'Speed', 'Status'].map(h => (
-              <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-600">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {networkData.map(row => (
-            <tr key={row.id} className="hover:bg-slate-50">
-              <td className="px-4 py-2.5 text-xs text-slate-500">{row.id}</td>
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.adapter}</td>
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.ipAddress}</td>
-              <td className="px-4 py-2.5 text-sm font-mono text-slate-600">{row.macAddress}</td>
-              <td className="px-4 py-2.5 text-sm text-slate-700">{row.speed}</td>
-              <td className="px-4 py-2.5">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${row.status === 'Connected' || row.status === 'Active' || row.status === 'Enabled' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                  {row.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="px-4 py-2.5 border-t border-slate-100">
-        <span className="text-xs text-slate-500">Showing 1 to {networkData.length} of {networkData.length} entries</span>
-      </div>
-    </div>
-  );
-}
-
-function InstalledSoftwareTab() {
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const perPage = 10;
-  const filtered = softwareData.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
-  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
-  const totalPages = Math.ceil(filtered.length / perPage);
-
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <select className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-600">
-          <option>10 Rows</option><option>25 Rows</option>
-        </select>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Search:</span>
-          <input
-            type="text"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="text-xs border border-slate-200 rounded px-2 py-1 w-40 focus:outline-none focus:ring-1 focus:ring-blue-400"
-          />
-        </div>
-      </div>
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            {['#', 'Name', 'Version', 'Publisher', 'Install Date'].map(h => (
-              <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-600">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {paginated.map(row => (
-            <tr key={row.id} className="hover:bg-slate-50">
-              <td className="px-4 py-2 text-xs text-slate-400">{row.id}</td>
-              <td className="px-4 py-2 text-sm text-slate-700">{row.name}</td>
-              <td className="px-4 py-2 text-sm text-slate-600">{row.version}</td>
-              <td className="px-4 py-2 text-sm text-slate-600">{row.publisher}</td>
-              <td className="px-4 py-2 text-sm text-slate-600">{row.installDate}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100">
-        <span className="text-xs text-slate-500">Showing {(page - 1) * perPage + 1} to {Math.min(page * perPage, filtered.length)} of {filtered.length} entries</span>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="text-xs px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40">Previous</button>
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(p => (
-            <button key={p} onClick={() => setPage(p)} className={`text-xs px-2.5 py-1 rounded ${page === p ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50'}`}>{p}</button>
-          ))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="text-xs px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40">Next</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EmptyTab({ label }: { label: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
-      <Icon name="ArchiveBoxIcon" size={32} className="text-slate-300 mx-auto mb-2" />
-      <p className="text-sm text-slate-500">No {label} data available for this device.</p>
     </div>
   );
 }
@@ -677,30 +652,6 @@ export default function EndpointDeviceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const deviceId = (params?.id as string) || 'LIL061010007';
-
-  const [activeTab, setActiveTab] = useState('dashboard');
-
-  function renderContent() {
-    switch (activeTab) {
-      case 'dashboard': return <DashboardTab />;
-      case 'summary': return <SummaryTab />;
-      case 'asset-mapping': return <AssetMappingTab />;
-      case 'system-information': return <SystemInformationTab />;
-      case 'performance': return <PerformanceTab />;
-      case 'hdd': return <HDDTab />;
-      case 'network': return <NetworkTab />;
-      case 'installed-software': return <InstalledSoftwareTab />;
-      case 'installed-patches': return <EmptyTab label="Installed Patches" />;
-      case 'missing-patches': return <EmptyTab label="Missing Patches" />;
-      case 'users': return <EmptyTab label="Users" />;
-      case 'startup-services': return <EmptyTab label="Startup Services" />;
-      case 'usb': return <EmptyTab label="USB" />;
-      case 'shared-folders': return <EmptyTab label="Shared Folders" />;
-      case 'device-drivers': return <EmptyTab label="Device Drivers" />;
-      case 'processes': return <EmptyTab label="Processes" />;
-      default: return <DashboardTab />;
-    }
-  }
 
   return (
     <AppLayout>
@@ -723,35 +674,9 @@ export default function EndpointDeviceDetailPage() {
             </h2>
           </div>
 
-          <div className="flex min-h-[600px]">
-            {/* Left sidebar */}
-            <div className="w-52 flex-shrink-0 border-r border-slate-200 overflow-y-auto">
-              {sidebarTabs.map(tab => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-slate-100 last:border-0 ${
-                      isActive
-                        ? 'bg-slate-800 text-white font-medium' :'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    {tab.label}
-                    {tab.count !== undefined && (
-                      <span className={`ml-1 font-semibold ${isActive ? 'text-white' : 'text-slate-800'}`}>
-                        ({tab.count})
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Content panel */}
-            <div className="flex-1 p-5 overflow-y-auto bg-slate-50/50">
-              {renderContent()}
-            </div>
+          {/* Bento content */}
+          <div className="p-5 bg-slate-50/50">
+            <BentoGrid />
           </div>
         </div>
       </div>
